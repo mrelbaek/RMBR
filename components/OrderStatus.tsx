@@ -17,6 +17,7 @@ export default function OrderStatus({ sessionId }: OrderStatusProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [processing, setProcessing] = useState(false)
+  const [debugInfo, setDebugInfo] = useState<any>(null)
 
   useEffect(() => {
     async function fetchOrderDetails() {
@@ -51,9 +52,13 @@ export default function OrderStatus({ sessionId }: OrderStatusProps) {
     if (!orderDetails) return
 
     setProcessing(true)
+    setError("")
+    setDebugInfo(null)
 
     try {
+      console.log("Generating report for order:", orderDetails.id)
       const result = await processOrder(orderDetails.id)
+      console.log("Report generation result:", result)
 
       if (result.success) {
         // Refresh order details to show updated status
@@ -62,11 +67,12 @@ export default function OrderStatus({ sessionId }: OrderStatusProps) {
           setOrderDetails(order as Order)
         }
       } else {
-        alert(result.error || "Failed to generate report")
+        setError(result.error || "Failed to generate report")
+        setDebugInfo(result)
       }
     } catch (err: any) {
       console.error("Error generating report:", err)
-      alert(err.message || "Failed to generate report")
+      setError(err.message || "Failed to generate report")
     } finally {
       setProcessing(false)
     }
@@ -88,7 +94,17 @@ export default function OrderStatus({ sessionId }: OrderStatusProps) {
           <AlertTriangle className="h-10 w-10 text-red-500" />
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h2>
-        <p className="text-gray-600 mb-8">{error}</p>
+        <p className="text-gray-600 mb-4">{error}</p>
+
+        {debugInfo && (
+          <details className="mb-8 w-full max-w-md">
+            <summary className="text-sm text-blue-600 cursor-pointer">Debug Information</summary>
+            <pre className="mt-2 text-xs bg-gray-100 p-4 rounded overflow-auto max-h-60 text-left">
+              {JSON.stringify(debugInfo, null, 2)}
+            </pre>
+          </details>
+        )}
+
         <button
           onClick={() => router.push("/")}
           className="bg-blue-500 text-white py-3 px-6 rounded-md font-medium hover:bg-blue-600 transition-colors"
@@ -124,6 +140,8 @@ export default function OrderStatus({ sessionId }: OrderStatusProps) {
           <div className="rounded-full bg-white p-3">
             {orderDetails.status === "completed" ? (
               <CheckCircle className="h-10 w-10 text-green-600" />
+            ) : orderDetails.status === "failed" ? (
+              <AlertTriangle className="h-10 w-10 text-red-500" />
             ) : (
               <Clock className="h-10 w-10 text-blue-500" />
             )}
@@ -133,10 +151,22 @@ export default function OrderStatus({ sessionId }: OrderStatusProps) {
 
       <div className="p-6 sm:p-8">
         <h2 className="text-center text-2xl font-bold text-gray-900 mb-2">
-          {orderDetails.status === "completed" ? "Order Completed!" : "Order Processing"}
+          {orderDetails.status === "completed"
+            ? "Order Completed!"
+            : orderDetails.status === "failed"
+              ? "Order Failed"
+              : orderDetails.status === "processing"
+                ? "Order Processing"
+                : "Order Pending"}
         </h2>
         <p className="text-center text-gray-600 mb-8">
-          {orderDetails.status === "completed" ? "Your book report is ready." : "Your book report is being prepared."}
+          {orderDetails.status === "completed"
+            ? "Your book report is ready."
+            : orderDetails.status === "failed"
+              ? "There was an issue generating your report."
+              : orderDetails.status === "processing"
+                ? "Your book report is being generated."
+                : "Your book report is waiting to be processed."}
         </p>
 
         <div className="bg-gray-50 p-4 mb-8 rounded-md border border-gray-200">
@@ -178,7 +208,9 @@ export default function OrderStatus({ sessionId }: OrderStatusProps) {
                     ? "text-green-600"
                     : orderDetails.status === "failed"
                       ? "text-red-600"
-                      : "text-blue-500"
+                      : orderDetails.status === "processing"
+                        ? "text-blue-600"
+                        : "text-yellow-600"
                 }`}
               >
                 {orderDetails.status.charAt(0).toUpperCase() + orderDetails.status.slice(1)}
@@ -214,6 +246,17 @@ export default function OrderStatus({ sessionId }: OrderStatusProps) {
             >
               {processing && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
               {processing ? "Generating Report..." : "Generate Report Now"}
+            </button>
+          )}
+
+          {orderDetails.status === "failed" && (
+            <button
+              onClick={handleGenerateReport}
+              disabled={processing}
+              className="w-full flex justify-center items-center py-3 px-4 rounded-md text-base font-medium text-white bg-yellow-500 hover:bg-yellow-600 transition-colors disabled:opacity-50"
+            >
+              {processing && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
+              {processing ? "Retrying..." : "Retry Generation"}
             </button>
           )}
 

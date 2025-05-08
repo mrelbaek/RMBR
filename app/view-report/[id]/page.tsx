@@ -14,6 +14,7 @@ export default function ViewReportPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [processing, setProcessing] = useState(false)
+  const [debugInfo, setDebugInfo] = useState<any>(null)
 
   const orderId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : ""
 
@@ -26,7 +27,9 @@ export default function ViewReportPage() {
       }
 
       try {
+        console.log("Fetching report for order:", orderId)
         const result = await getReport(orderId)
+        console.log("Report fetch result:", result)
 
         if (result.error) {
           setError(result.error)
@@ -48,9 +51,12 @@ export default function ViewReportPage() {
   const handleGenerateReport = async () => {
     setProcessing(true)
     setError("")
+    setDebugInfo(null)
 
     try {
+      console.log("Generating report for order:", orderId)
       const result = await processOrder(orderId)
+      console.log("Report generation result:", result)
 
       if (result.success) {
         // Fetch the newly generated report
@@ -63,6 +69,7 @@ export default function ViewReportPage() {
         }
       } else {
         setError(result.error || "Failed to generate report")
+        setDebugInfo(result)
       }
     } catch (err: any) {
       console.error("Error generating report:", err)
@@ -133,7 +140,16 @@ export default function ViewReportPage() {
                   <AlertTriangle className="h-10 w-10 text-yellow-600" />
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Report Not Available</h2>
-                <p className="text-gray-600 mb-8">{error}</p>
+                <p className="text-gray-600 mb-4">{error}</p>
+
+                {debugInfo && (
+                  <details className="mb-8 w-full max-w-md">
+                    <summary className="text-sm text-blue-600 cursor-pointer">Debug Information</summary>
+                    <pre className="mt-2 text-xs bg-gray-100 p-4 rounded overflow-auto max-h-60 text-left">
+                      {JSON.stringify(debugInfo, null, 2)}
+                    </pre>
+                  </details>
+                )}
 
                 <button
                   onClick={handleGenerateReport}

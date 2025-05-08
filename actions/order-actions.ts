@@ -22,8 +22,18 @@ export async function createOrder(data: CreateOrderData) {
 
     // Check if Supabase client is properly initialized
     if (!supabase) {
-      console.error("Supabase client is not initialized")
-      return { success: false, error: "Database connection error" }
+      console.error("Supabase client is not initialized", {
+        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? "set" : "missing",
+        supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "set" : "missing",
+      })
+      return {
+        success: false,
+        error: "Database connection error",
+        details: {
+          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? "set" : "missing",
+          supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "set" : "missing",
+        },
+      }
     }
 
     // Validate required fields

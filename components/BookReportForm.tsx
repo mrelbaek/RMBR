@@ -35,6 +35,7 @@ export default function BookReportForm() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [debugInfo, setDebugInfo] = useState<any>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
@@ -50,6 +51,26 @@ export default function BookReportForm() {
     e.preventDefault()
     setLoading(true)
     setError("")
+    setDebugInfo(null)
+
+    // Validate form data
+    if (!formData.bookTitle.trim()) {
+      setError("Book title is required")
+      setLoading(false)
+      return
+    }
+
+    if (!formData.author.trim()) {
+      setError("Author name is required")
+      setLoading(false)
+      return
+    }
+
+    if (!formData.email.trim()) {
+      setError("Email address is required")
+      setLoading(false)
+      return
+    }
 
     // Track form submission
     trackEvent("form_submit", {
@@ -59,9 +80,15 @@ export default function BookReportForm() {
     })
 
     try {
-      // In a real implementation, you would create a Stripe session here
-      // For demo purposes, we'll create a mock session ID
-      const mockSessionId = "sess_" + Math.random().toString(36).substr(2, 9)
+      console.log("Submitting form data:", {
+        customer_email: formData.email,
+        book_title: formData.bookTitle,
+        author: formData.author,
+        grade_level: formData.educationLevel,
+        length: formData.wordCount,
+        is_rush: formData.deliveryOption === "rush",
+        sample_text: formData.writingSample || undefined,
+      })
 
       // Create order in Supabase
       const result = await createOrder({
@@ -72,15 +99,17 @@ export default function BookReportForm() {
         length: formData.wordCount,
         is_rush: formData.deliveryOption === "rush",
         sample_text: formData.writingSample || undefined,
-        stripe_session_id: mockSessionId,
       })
 
+      console.log("Order creation result:", result)
+
       if (!result.success) {
+        setDebugInfo(result)
         throw new Error(result.error || "Failed to create order")
       }
 
       // Redirect to success page with the session ID
-      router.push(`/success?session_id=${mockSessionId}`)
+      router.push(`/success?session_id=${result.sessionId}`)
     } catch (err: any) {
       console.error("Form submission error:", err)
       setError(err.message || "Failed to submit your order. Please try again.")
@@ -127,6 +156,14 @@ export default function BookReportForm() {
         {error && (
           <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-md">
             <p className="text-sm text-red-700">{error}</p>
+            {debugInfo && (
+              <details className="mt-2">
+                <summary className="text-xs text-red-500 cursor-pointer">Debug Info</summary>
+                <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
+                  {JSON.stringify(debugInfo, null, 2)}
+                </pre>
+              </details>
+            )}
           </div>
         )}
 

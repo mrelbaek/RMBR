@@ -10,22 +10,32 @@ let supabase: ReturnType<typeof createClient> | null = null
 // Initialize the Supabase client only if the environment variables are available
 export function getSupabaseClient() {
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error("Supabase URL or Anon Key is missing")
+    console.error("Supabase URL or Anon Key is missing", {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseAnonKey,
+    })
+
+    if (typeof window !== "undefined") {
+      // In browser, show more detailed error
+      console.log("Environment variables:", {
+        NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "[REDACTED]" : undefined,
+      })
+    }
+
     // Return a mock client during build time or when env vars are missing
-    return {
-      from: () => ({
-        select: () => ({ data: [], error: null }),
-        insert: () => ({ data: null, error: null }),
-        update: () => ({ data: null, error: null }),
-        eq: () => ({ data: null, error: null }),
-        single: () => ({ data: null, error: null }),
-        order: () => ({ data: [], error: null }),
-      }),
-    } as any
+    return null
   }
 
   if (!supabase) {
-    supabase = createClient(supabaseUrl, supabaseAnonKey)
+    try {
+      console.log("Initializing Supabase client with URL:", supabaseUrl)
+      supabase = createClient(supabaseUrl, supabaseAnonKey)
+      console.log("Supabase client initialized successfully")
+    } catch (error) {
+      console.error("Error initializing Supabase client:", error)
+      return null
+    }
   }
 
   return supabase
